@@ -10,7 +10,7 @@ def runTextract():
 
 # convert pdf to docx
 
-cv = Converter(INVOICE)
+cv = Converter(TEXTUAL_FILE)
 is_textual = cv.parse(**cv.default_settings)
 
 if is_textual:

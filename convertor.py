@@ -56,6 +56,7 @@ class Pages(BaseCollection):
             page_area = page_area if page_area > 0 else 1
 
             text_share = paragraphs_area / page_area
+            image_share = images_area / page_area
             word_count = len(raw_page.raw_text.strip())
 
             page_fullness = (images_area + paragraphs_area) / page_area
@@ -67,7 +68,15 @@ class Pages(BaseCollection):
             print(f'Page fullness: {page_fullness}')
             """
 
-            if text_share > 0.2 or word_count > MINIMUM_PARAGRAPH_SIZE or page_fullness < 0.2:
+            is_the_page_textual = False
+
+            if text_share > 0.2 and image_share < 0.7:
+                is_the_page_textual = True
+
+            if word_count > MINIMUM_PARAGRAPH_SIZE:
+                is_the_page_textual = True
+
+            if is_the_page_textual or page_fullness < 0.2:
                 metrics.append(True)
             else:
                 metrics.append(False)
