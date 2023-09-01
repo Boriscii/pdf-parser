@@ -9,6 +9,7 @@ from pdf2docx.page.RawPageFactory import RawPageFactory
 from pdf2docx.common.Collection import BaseCollection
 from pdf2docx.font.Fonts import Fonts
 
+MINIMUM_PARAGRAPH_SIZE = 150
 
 class Pages(BaseCollection):
     '''A collection of ``Page``.'''
@@ -28,8 +29,8 @@ class Pages(BaseCollection):
         # ---------------------------------------------
         # 1. extract and then clean up raw page
         # ---------------------------------------------
-        pages, raw_pages = [], []
-        words_found = False
+        pages, raw_pages, metrics = [], [], []
+
         for page in self:
             if page.skip_parsing: continue
 
@@ -37,8 +38,39 @@ class Pages(BaseCollection):
             raw_page = RawPageFactory.create(page_engine=fitz_doc[page.id], backend='PyMuPDF')
             raw_page.restore(**settings)
 
-            # check if any words are extracted since scanned pdf may be directed
-            words_found += len(raw_page.raw_text.strip())
+            blocks = fitz_doc[page.id].get_text('blocks')
+
+            images_area = 0
+            paragraphs_area = 0
+
+            for x0, y0, x1, y1, block_content, block_no, block_type in blocks:
+                height = y1 - y0
+                width = x1 - x0
+                area = height * width
+                if block_type == 1: #IMAGE BLOCK
+                    images_area += area
+                else:
+                    paragraphs_area += area
+
+            page_area = raw_page.width * raw_page.height
+            page_area = page_area if page_area > 0 else 1
+
+            text_share = paragraphs_area / page_area
+            word_count = len(raw_page.raw_text.strip())
+
+            page_fullness = (images_area + paragraphs_area) / page_area
+
+            """
+            print('------')
+            print(f'Ratio: {text_share}')
+            print(f'Word count: {word_count}')
+            print(f'Page fullness: {page_fullness}')
+            """
+
+            if text_share > 0.2 or word_count > MINIMUM_PARAGRAPH_SIZE or page_fullness < 0.2:
+                metrics.append(True)
+            else:
+                metrics.append(False)
 
             # process blocks and shapes based on bbox
             raw_page.clean_up(**settings)
@@ -56,7 +88,7 @@ class Pages(BaseCollection):
             pages.append(page)
 
         # show message if no words found
-        self.words_found = words_found
+        self.is_textual = all(metrics)
 
         # ---------------------------------------------
         # 2. parse structure in document/pages level
@@ -217,7 +249,7 @@ class Converter:
             .parse_document(**kwargs) \
             .parse_pages(**kwargs)
 
-        return self._pages.words_found
+        return self._pages.is_textual
 
     def load_pages(self, start: int = 0, end: int = None, pages: list = None):
         '''Step 1 of converting process: open PDF file with ``PyMuPDF``,
