@@ -31,7 +31,10 @@ class Pages(BaseCollection):
         # ---------------------------------------------
         pages, raw_pages, metrics = [], [], []
 
+        i = 0
+        full_doc = []
         for page in self:
+            i += 1
             if page.skip_parsing: continue
 
             # init and extract data from PDF
@@ -59,14 +62,15 @@ class Pages(BaseCollection):
             image_share = images_area / page_area
             word_count = len(raw_page.raw_text.strip())
 
+            full_doc.append(raw_page.raw_text.strip())
+
             page_fullness = (images_area + paragraphs_area) / page_area
 
-            """
             print('------')
+            print(f'Page: {i}')
             print(f'Ratio: {text_share}')
             print(f'Word count: {word_count}')
             print(f'Page fullness: {page_fullness}')
-            """
 
             is_the_page_textual = False
 
@@ -76,7 +80,7 @@ class Pages(BaseCollection):
             if word_count > MINIMUM_PARAGRAPH_SIZE:
                 is_the_page_textual = True
 
-            if is_the_page_textual or page_fullness < 0.2:
+            if is_the_page_textual or page_fullness < 0.5:
                 metrics.append(True)
             else:
                 metrics.append(False)
@@ -98,6 +102,12 @@ class Pages(BaseCollection):
 
         # show message if no words found
         self.is_textual = all(metrics)
+
+        if self.is_textual:
+            self.document = ' '.join(full_doc)
+        else:
+            self.document = False
+
 
         # ---------------------------------------------
         # 2. parse structure in document/pages level
@@ -258,7 +268,7 @@ class Converter:
             .parse_document(**kwargs) \
             .parse_pages(**kwargs)
 
-        return self._pages.is_textual
+        return self._pages.document
 
     def load_pages(self, start: int = 0, end: int = None, pages: list = None):
         '''Step 1 of converting process: open PDF file with ``PyMuPDF``,
@@ -357,10 +367,7 @@ class Converter:
             try:
                 page.make_docx(docx_file)
             except Exception as e:
-                if not kwargs['debug'] and kwargs['ignore_page_error']:
-                    logging.error('Ignore page %d due to making page error: %s', pid, e)
-                else:
-                    raise MakedocxException(f'Error when make page {pid}: {e}')
+                logging.error('Ignore page %d due to making page error: %s', pid, e)
 
         # save docx
         docx_file.save(filename)
