@@ -104,7 +104,7 @@ class Pages(BaseCollection):
         self.is_textual = all(metrics)
 
         if self.is_textual:
-            self.document = ' '.join(full_doc)
+            self.document = '/n'.join(full_doc)
         else:
             self.document = False
 
@@ -265,8 +265,8 @@ class Converter:
             kwargs (dict, optional): Configuration parameters.
         '''
         self.load_pages(start, end, pages) \
-            .parse_document(**kwargs) \
-            .parse_pages(**kwargs)
+            .parse_document(**kwargs) #\
+            #.parse_pages(**kwargs)
 
         return self._pages.document
 

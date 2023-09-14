@@ -1,4 +1,9 @@
 from convertor import Converter
+from langchain import text_splitter
+
+TOKEN_LIMIT = 3500
+splitter = text_splitter.RecursiveCharacterTextSplitter(separators=["\n", ".", " ", ""]).from_tiktoken_encoder(encoding_name='cl100k_base')
+
 
 SCANNED_FILE = './docs/scanned.pdf'
 TEXTUAL_FILE = './docs/textual.pdf'
@@ -11,16 +16,10 @@ def runTextract():
 # convert pdf to docx
 
 cv = Converter('./docs/order.pdf')
-is_textual = cv.parse(**cv.default_settings)
+text = cv.parse(**cv.default_settings)
 
-print(is_textual)
-
-if is_textual:
-  cv.make_docx(DOCX_FILE)
-else:
-    # LIKELY A SCANNED DOCUMENT / HANDWRITING
-  runTextract()
-
-
+chunks = splitter.split_text(text)
+print([len(chunk.split(' ')) for chunk in chunks])
+print(chunks[1])
 
 cv.close()
