@@ -1,11 +1,23 @@
 from langchain import text_splitter
 import time
 from lorem import paragraph
+import tiktoken
 
-TOKEN_LIMIT = 3500
-N=20000
+N=200
 
-splitter = text_splitter.RecursiveCharacterTextSplitter(separators=["\n", ".", " ", ""]).from_tiktoken_encoder(encoding_name='cl100k_base')
+enc = tiktoken.get_encoding('cl100k_base')
+def count_tokens(text: str) -> int:
+    return len(
+        enc.encode(
+            text,
+        )
+    )
+
+splitter = text_splitter.RecursiveCharacterTextSplitter(separators=["\n", ".", " ", ""],
+                                                        chunk_size=800,
+                                                        chunk_overlap=50,
+                                                        length_function=count_tokens
+)
 
 paragraph = next(paragraph(count=1)) + '\n'
 text = paragraph * N
@@ -18,5 +30,4 @@ end_time = time.perf_counter()
 runtime = end_time - start_time
 word_count = len(text.split(' '))
 print(f'String with {word_count} words was split in {runtime} seconds.')
-print([len(chunk.split(' ')) for chunk in chunks])
-print(chunks[0])
+print([count_tokens(chunk) for chunk in chunks])

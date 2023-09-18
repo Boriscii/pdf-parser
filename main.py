@@ -1,9 +1,23 @@
 import fitz
 from langchain import text_splitter
+import tiktoken
 
-TOKEN_LIMIT = 3500
-splitter = text_splitter.RecursiveCharacterTextSplitter(separators=["\n", ".", " ", ""], chunk_size=800)\
-  .from_tiktoken_encoder(encoding_name='cl100k_base')
+TOKEN_LIMIT = 800
+enc = tiktoken.get_encoding('cl100k_base')
+
+def count_tokens(text: str) -> int:
+    return len(
+        enc.encode(
+            text,
+        )
+    )
+
+splitter = text_splitter.RecursiveCharacterTextSplitter(separators=["\n", ".", " ", ""],
+                                                        chunk_size=TOKEN_LIMIT,
+                                                        chunk_overlap=TOKEN_LIMIT / 10,
+                                                        length_function=count_tokens
+)
+
 
 
 SCANNED_FILE = './docs/scanned.pdf'
