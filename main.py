@@ -1,8 +1,9 @@
-from convertor import Converter
+import fitz
 from langchain import text_splitter
 
 TOKEN_LIMIT = 3500
-splitter = text_splitter.RecursiveCharacterTextSplitter(separators=["\n", ".", " ", ""]).from_tiktoken_encoder(encoding_name='cl100k_base')
+splitter = text_splitter.RecursiveCharacterTextSplitter(separators=["\n", ".", " ", ""], chunk_size=800)\
+  .from_tiktoken_encoder(encoding_name='cl100k_base')
 
 
 SCANNED_FILE = './docs/scanned.pdf'
@@ -13,13 +14,24 @@ DOCX_FILE = 'test.docx'
 def runTextract():
   print('Document re-routed for Textract processing')
 
-# convert pdf to docx
+def is_text_page(fitz_page):
+  return True
 
-cv = Converter('./docs/order.pdf')
-text = cv.parse(**cv.default_settings)
+doc = fitz.Document('./docs/textual.pdf')
+all_doc = []
 
+for page in doc.pages():
+  if not is_text_page(page):
+    runTextract()
+    break
+
+  all_doc.append(page.get_text())
+  print(page.get_text())
+
+# SHOULD NOT HAPPEN IF PROCESSING WAS BROKEN, MAYBE USE A FLAG?
+text = "\n".join(all_doc)
 chunks = splitter.split_text(text)
 print([len(chunk.split(' ')) for chunk in chunks])
 print(chunks[1])
 
-cv.close()
+doc.close()
